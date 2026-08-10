@@ -1,0 +1,31 @@
+@import "rofiConf.rasi"
+
+window {
+    width: 600px;
+}
+
+listview {
+    columns:    3;
+    lines:       2;
+    spacing:    12px;
+    cycle:       true;
+    dynamic:     true;
+    scrollbar:   false;
+}
+
+element {
+    orientation:    vertical;
+    padding:         2px;
+    spacing:          6px;
+    border-radius:   12px;
+}
+
+element-icon {
+    size:            230px;
+    horizontal-align: 0.5;
+}
+
+element-text {
+    horizontal-align: 0.5;
+    font: "JetBrainsMono Nerd Font 9";
+}

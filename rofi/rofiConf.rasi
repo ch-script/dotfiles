@@ -1,0 +1,77 @@
+@import "~/.cache/wal/colors-rofi-dark.rasi"
+
+* {
+    background-color: transparent;
+    text-color:        @foreground;
+}
+
+window {
+    transparency:    "real";
+    background-color: @background;
+    border:           2px;
+    border-color:     @selected-active-background;
+    border-radius:    18px;
+    width:            560px;
+    padding:          14px;
+    /* falls back to a semi-transparent background without a compositor blur */
+}
+
+mainbox {
+    background-color: transparent;
+    spacing: 10px;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    background-color: @alternate-active-background;
+    text-color:        @foreground;
+    border-radius:     12px;
+    padding:            10px 14px;
+    spacing:            8px;
+    children: [ prompt, entry ];
+}
+
+prompt {
+    text-color: @selected-active-background;
+    font: "JetBrainsMono Nerd Font 11";
+}
+
+entry {
+    placeholder:       "Search";
+    placeholder-color: @urgent-background;
+    text-color:        @foreground;
+}
+
+listview {
+    background-color: transparent;
+    columns:            1;
+    lines:               8;
+    spacing:            6px;
+    cycle:               true;
+    dynamic:             true;
+    scrollbar:           false;
+}
+
+element {
+    background-color: transparent;
+    text-color:        @foreground;
+    border-radius:     12px;
+    padding:            8px 12px;
+    spacing:            10px;
+}
+
+element selected normal,
+element selected active,
+element selected urgent {
+    background-color: @selected-active-background;
+    text-color:        #101010;
+}
+
+element-icon {
+    size:           24px;
+    vertical-align: 0.5;
+}
+
+element-text {
+    vertical-align: 0.5;
+}
