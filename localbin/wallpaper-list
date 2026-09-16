@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+WALLPAPER_DIR="$HOME/Pictures/Wallpapers"
+THUMB_DIR="$HOME/.cache/wallpaper-thumbs"
+THUMB_SIZE="260x260"
+
+IMG_EXT_RE='^(jpg|jpeg|png|webp|bmp|gif)$'
+VID_EXT_RE='^(mp4|webm|mkv|mov|avi)$'
+
+if command -v magick >/dev/null 2>&1; then
+    IM_CMD="magick"
+elif command -v convert >/dev/null 2>&1; then
+    IM_CMD="convert"
+else
+    IM_CMD=""
+fi
+
+mkdir -p "$THUMB_DIR"
+
+shopt -s nullglob nocaseglob
+for file in "$WALLPAPER_DIR"/*; do
+    [[ -f "$file" ]] || continue
+    name="$(basename "$file")"
+    ext="${name##*.}"
+    ext="${ext,,}"
+
+    if [[ "$ext" =~ $IMG_EXT_RE ]]; then
+        kind="image"
+    elif [[ "$ext" =~ $VID_EXT_RE ]]; then
+        kind="video"
+    else
+        continue
+    fi
+
+    hash="$(printf '%s' "$file" | md5sum | cut -d' ' -f1)"
+    thumb="$THUMB_DIR/$hash.png"
+
+    if [[ ! -f "$thumb" ]]; then
+        if [[ "$kind" == "image" ]]; then
+            if [[ -n "$IM_CMD" ]]; then
+                "$IM_CMD" "$file" -resize "${THUMB_SIZE}^" -gravity center \
+                    -extent "$THUMB_SIZE" "$thumb" 2>/dev/null || cp "$file" "$thumb"
+            else
+                cp "$file" "$thumb"
+            fi
+        else
+            ffmpeg -y -loglevel error -ss 00:00:01 -i "$file" -frames:v 1 \
+                -vf "scale=${THUMB_SIZE//x/:}:force_original_aspect_ratio=increase,crop=${THUMB_SIZE//x/:}" \
+                "$thumb" || continue
+        fi
+    fi
+
+    printf '%s\t%s\t%s\t%s\n' "$name" "$file" "$thumb" "$kind"
+done
+shopt -u nullglob nocaseglob

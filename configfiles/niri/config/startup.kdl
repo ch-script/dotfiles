@@ -1,0 +1,4 @@
+spawn-at-startup "quickshell" "-c" "shell"
+
+// Wallpaper on startup controller
+spawn-at-startup "bash" "-c" "~/.local/bin/wallpaper-restore.sh"

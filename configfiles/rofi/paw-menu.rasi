@@ -1,0 +1,13 @@
+/*
+ * paw-menu.rasi
+ * Tema del launcher de paw — simplemente importa tu tema oscuro existente.
+ * Ajusta la ruta del @import si colors-rofi-dark.rasi no vive en ~/.config/rofi/
+ */
+
+@import "~/.config/rofi/colors-rofi-dark.rasi"
+
+/* Puedes sobreescribir cosas puntuales aquí si quieres que el menú de paw
+   se vea ligeramente distinto al resto de tus rofis, por ejemplo: */
+// window {
+//     width: 30%;
+// }

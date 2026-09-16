@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""
+paw-rofi — Lanzador rofi para los comandos custom de `paw`.
+
+Lee ~/.config/paw/customs.toml y genera menús/submenús navegables en rofi,
+respetando la sintaxis de paw: comandos simples, argumentos dinámicos {1}{2}...
+y comandos avanzados con confirm (yesorno / match:<palabra>).
+"""
+
+import subprocess
+import sys
+import re
+from pathlib import Path
+
+try:
+    import tomllib  # Python 3.11+
+except ModuleNotFoundError:
+    import tomli as tomllib  # fallback si usas Python < 3.11 (pip install tomli)
+
+CONFIG_PATH = Path.home() / ".config" / "paw" / "customs.toml"
+THEME_PATH = Path.home() / ".config" / "rofi" / "paw-menu.rasi"
+TERMINAL_CMD = ["foot"]  # cambia aquí si en algún momento cambias de terminal
+
+BACK_LABEL = "‹ Volver"
+ARG_RE = re.compile(r"\{(\d+)\}")
+
+
+def load_tree() -> dict:
+    if not CONFIG_PATH.exists():
+        rofi_message(f"No se encontró {CONFIG_PATH}")
+        sys.exit(1)
+    with open(CONFIG_PATH, "rb") as f:
+        return tomllib.load(f)
+
+
+def get_node(tree: dict, path: str) -> dict:
+    node = tree
+    if path:
+        for part in path.split("."):
+            node = node.get(part, {})
+            if not isinstance(node, dict):
+                return {}
+    return node
+
+
+def is_submenu(value) -> bool:
+    # Una tabla TOML que NO tiene "cmd" es una categoría/submenú.
+    # Una tabla que SÍ tiene "cmd" es un comando avanzado (leaf).
+    return isinstance(value, dict) and "cmd" not in value
+
+
+def rofi_dmenu(prompt: str, options: list[str] | None = None, message: str | None = None) -> str:
+    cmd = ["rofi", "-dmenu", "-i", "-theme", str(THEME_PATH), "-p", prompt]
+    if message:
+        cmd += ["-mesg", message]
+    stdin_data = "\n".join(options) if options else ""
+    result = subprocess.run(cmd, input=stdin_data, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def rofi_message(msg: str):
+    subprocess.run(["rofi", "-e", msg, "-theme", str(THEME_PATH)])
+
+
+def run_background(cmd: str):
+    subprocess.Popen(
+        ["sh", "-c", cmd],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+    )
+
+
+def run_in_terminal(cmd: str):
+    wrapped = f"{cmd}; echo; echo '[paw] Presiona Enter para cerrar...'; read _"
+    subprocess.Popen(TERMINAL_CMD + ["sh", "-c", wrapped])
+
+
+def ask_dynamic_args(cmd_str: str) -> str | None:
+    """Pide valores para {1}, {2}, ... en orden. Devuelve None si el usuario cancela."""
+    numbers = sorted(set(ARG_RE.findall(cmd_str)), key=int)
+    for n in numbers:
+        value = rofi_dmenu(f"Argumento {n}")
+        if value == "":
+            return None  # ESC o vacío -> cancelar
+        cmd_str = cmd_str.replace("{" + n + "}", value)
+    return cmd_str
+
+
+def confirm_yesorno(msg: str) -> bool:
+    # "No" va primero para que Enter sin mover el cursor sea siempre seguro.
+    choice = rofi_dmenu("¿Continuar?", options=["No", "Sí"], message=msg)
+    return choice == "Sí"
+
+
+def confirm_match(word: str, msg: str) -> bool:
+    typed = rofi_dmenu(f"Escribe: {word}", message=msg)
+    return typed == word
+
+
+def handle_leaf(value):
+    if isinstance(value, str):
+        cmd_str = value
+        confirm_type = None
+        msg = ""
+    else:
+        cmd_str = value.get("cmd", "")
+        confirm_type = value.get("confirm")
+        msg = value.get("msg", "")
+
+    has_args = bool(ARG_RE.search(cmd_str))
+
+    if has_args:
+        cmd_str = ask_dynamic_args(cmd_str)
+        if cmd_str is None:
+            return  # cancelado
+
+    if confirm_type == "yesorno":
+        if not confirm_yesorno(msg):
+            return
+    elif confirm_type and confirm_type.startswith("match:"):
+        word = confirm_type.split(":", 1)[1]
+        if not confirm_match(word, msg):
+            return
+
+    needs_visible_terminal = has_args or bool(confirm_type)
+    if needs_visible_terminal:
+        run_in_terminal(cmd_str)
+    else:
+        run_background(cmd_str)
+
+
+def show_menu(tree: dict, path: str = ""):
+    node = get_node(tree, path)
+    if not node:
+        rofi_message("Este submenú está vacío.")
+        return
+
+    labels = []
+    label_to_key = {}
+    for key, value in node.items():
+        label = f"▸ {key}" if is_submenu(value) else key
+        labels.append(label)
+        label_to_key[label] = key
+
+    options = ([BACK_LABEL] if path else []) + labels
+    breadcrumb = path if path else "paw"
+
+    selection = rofi_dmenu(breadcrumb, options=options)
+
+    if selection == "" or selection is None:
+        return  # ESC -> salir sin hacer nada
+
+    if selection == BACK_LABEL:
+        parent = ".".join(path.split(".")[:-1])
+        show_menu(tree, parent)
+        return
+
+    key = label_to_key.get(selection)
+    if key is None:
+        return  # entrada custom no reconocida (custom-entry deshabilitada de todas formas)
+
+    value = node[key]
+    new_path = f"{path}.{key}" if path else key
+
+    if is_submenu(value):
+        show_menu(tree, new_path)
+    else:
+        handle_leaf(value)
+
+
+def main():
+    tree = load_tree()
+    show_menu(tree)
+
+
+if __name__ == "__main__":
+    main()
