@@ -7,7 +7,10 @@ running on a fresh machine.
 
 ## Screenshots
 
-![App launcher](screenshots/app-launcher.png)
+### queen adachi
+![Desktop](screenshots/desktop.png)
+
+### Nyapaper wallpaper selector!!! the best wallpaper selector eve
 ![Wallpaper selector](screenshots/wallpaper-selector.png)
 
 ## Dependencies
