@@ -77,7 +77,7 @@ PanelWindow {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Metrics.groupSpacing
 
-        Label { text: "Puru Puru Pururin" }
+        Label { text: "Aren't you quiet?" }
         Spacer { size: 6 }
         Separator {}
         Spacer { size: 6 }

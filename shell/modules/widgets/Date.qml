@@ -20,7 +20,7 @@ Item {
 
     Process {
         id: dateProc
-        command: ["date", "+%a %d %b"]
+        command: ["env", "LC_ALL=C", "date", "+%a %d %b"]
         stdout: StdioCollector {
             onStreamFinished: root.dateText = this.text.trim()
         }
