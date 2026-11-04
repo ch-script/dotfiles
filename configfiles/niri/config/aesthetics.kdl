@@ -112,3 +112,13 @@ layer-rule {
     match namespace="mpvpaper"
     place-within-backdrop true
 }
+
+layer-rule {
+    match namespace="^clock-widget$"
+    place-within-backdrop true
+}
+
+layer-rule {
+    match namespace="^cava-widget$"
+    place-within-backdrop true
+}
